@@ -35,7 +35,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Define a route to handle GET requests to "/car"
-app.get('/car', async (req, res) => {
+app.get('/cars', async (req, res) => {
   try {
     // Retrieve data from Firebase Firestore and return selected fields only
     const carList = await db.collection("carDB").get();
