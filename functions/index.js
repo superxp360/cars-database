@@ -25,7 +25,7 @@ const db = admin.firestore();
 // Create a rate limiter middleware with IP-based rate limiting
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 30, // Allow 30 requests every 5 minutes
+  max: 20, // Allow 20 requests every 5 minutes
   keyGenerator: (req) => {
     return req.ip; // Use the client's IP address as the rate limit key
   },
@@ -34,15 +34,37 @@ const limiter = rateLimit({
 // Apply the rate limiter middleware to all routes
 app.use(limiter);
 
-// Define a route to handle GET requests to "/car"
-app.get('/cars', async (req, res) => {
+// Define a route to handle GET requests to "/car/:year"
+app.get('/car/:year', async (req, res) => {
   try {
-    // Retrieve data from Firebase Firestore and return selected fields only
-    const carList = await db.collection("carDB").get();
-    const data = carList.docs.map((doc) => {
+    const { year } = req.params;
+    const { make, model } = req.query;
+
+    // Parse the year parameter as an integer
+    const yearInt = parseInt(year, 10);
+
+    // Construct the base Firestore query based on the provided year
+    let query = db.collection("carDB").where("Year", "==", yearInt);
+
+    // Add additional filters for make and model if provided
+    if (make) {
+      query = query.where("Make", "==", make);
+    }
+    if (model) {
+      query = query.where("Model", "==", model);
+    }
+
+    // Retrieve data from Firestore and return selected fields only
+    const carList = await query.get();
+    const car = carList.docs.map((doc) => {
       const { Year, Make, Model } = doc.data();
       return { Year, Make, Model };
     });
+
+    // Check if any car data is returned
+    if (car.length === 0) {
+      return res.status(404).send("Sorry, car isn't in the database :(");
+    }
 
     // Send the retrieved data as a response
     res.status(200).json(data);
